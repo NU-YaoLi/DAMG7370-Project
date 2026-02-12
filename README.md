@@ -57,3 +57,9 @@ This project utilizes **Infrastructure as Code (IaC)** to ensure the entire pipe
 ├── scripts/
 │   └── setup_db.sql          # RDS Schema and Indexing definitions
 └── README.md
+```
+
+---
+
+## 📂 visual representation
+<img width="1600" height="914" alt="Code_Generated_Image" src="https://github.com/user-attachments/assets/ea544112-f19d-4c03-9008-e8bad9ed149e" />
