@@ -30,6 +30,7 @@ This project utilizes **Infrastructure as Code (IaC)** to ensure the entire pipe
 | **Compute / ETL** | **AWS Glue (PySpark)** | Distributed processing engine for large-scale data transformation. |
 | **Database** | **Amazon RDS (Postgres)** | High-availability relational storage for the final analytics layer. |
 | **Visualization** | **AWS QuickSight** | BI tool for mapping regional investment "hotspots" in WA. |
+| **Identity Management** | **AWS IAM Identity Center** | Centralized workforce authentication and Single Sign-On (SSO) for secure account access. |
 
 ---
 
