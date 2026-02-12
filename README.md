@@ -1,23 +1,21 @@
-# DAMG7370-Project
-# Washington Real Estate Investment: Scalable Data Pipeline
+# DAMG7370-Project: Washington Real Estate Investment Analysis
 
 ## 📖 Topic: House Investment in Washington State
-In this project, we analyze property investment in a specific area from two primary financial lenses:
+In this project, we analyze property investment in Washington State from two primary financial lenses:
 
-1.  **Capital Appreciation:** The change in property value over time. If the value increases, the owner realizes a profit upon sale. This is the "potential return" of the asset.
-2.  **Rental Income:** By leasing the property, the owner receives a stable monthly cash flow. 
+1. **Capital Appreciation:** The change in property value over time. If the value increases, the owner realizes a profit upon sale. This is the "potential return" of the asset.
+2. **Rental Income:** By leasing the property, the owner receives a stable monthly cash flow. 
 
-Combined, property value growth and rental income represent the core ways real estate investment generates wealth. Based on this thesis, we analyze historical housing prices and rental data in WA to identify trends and patterns. 
-This analysis provides data-driven insights into whether buying a property in a specific location and time is a sound investment decision.
+Combined, property value growth and rental income represent the core ways real estate investment generates wealth. Based on this thesis, we analyze historical housing prices and rental data in **WA** to identify trends and patterns. By leveraging a comprehensive national data warehouse, this analysis provides data-driven insights into whether buying a property in a specific Washington location and time is a sound investment decision compared to broader market benchmarks.
 
 ---
 
 ## 🎯 Project Goals & Outcomes
 The objective is to build and deploy a fully automated, state-wide data platform using a **Modern Data Stack**:
-* **Automated Extraction:** Ingest ZHVI (Home Value) and ZORI (Rent Index) datasets for the entire state of Washington.
-* **Distributed ETL:** Use PySpark to handle the high-volume task of cleaning and "unpivoting" time-series data.
-* **Relational Storage:** Load processed data into an RDS instance for high-performance SQL analysis.
-* **Interactive BI:** Deploy a QuickSight dashboard to visualize 5-year ROI and vacancy-to-yield correlations across WA counties.
+* **Automated Extraction:** Ingest national ZHVI (Home Value) and ZORI (Rent Index) datasets from Zillow Research.
+* **Distributed ETL:** Use PySpark to handle the high-volume task of cleaning and "unpivoting" time-series data for the entire US.
+* **Relational Storage:** Load the complete processed dataset into an RDS instance for high-performance SQL analysis.
+* **Interactive BI:** Deploy a QuickSight dashboard to visualize 5-year ROI and yield correlations specifically for **Washington State**.
 
 ---
 
@@ -29,7 +27,7 @@ This project utilizes **Infrastructure as Code (IaC)** to ensure the entire pipe
 | **Infrastructure** | **Terraform** | Automates the deployment of the S3-Glue-RDS ecosystem. |
 | **Storage** | **Amazon S3** | Data Lake storage with **Partitioning** (by State/Year) for query optimization. |
 | **Orchestration** | **AWS Step Functions** | State machine logic to manage job dependencies and error retries. |
-| **Compute / ETL** | **AWS Glue (PySpark)** | Distributed processing engine for state-wide data transformation. |
+| **Compute / ETL** | **AWS Glue (PySpark)** | Distributed processing engine for large-scale data transformation. |
 | **Database** | **Amazon RDS (Postgres)** | High-availability relational storage for the final analytics layer. |
 | **Visualization** | **AWS QuickSight** | BI tool for mapping regional investment "hotspots" in WA. |
 
@@ -37,14 +35,13 @@ This project utilizes **Infrastructure as Code (IaC)** to ensure the entire pipe
 
 ## 🚀 Pipeline Architecture
 
-1.  **Data Ingestion:** Raw Zillow Research CSVs (containing national historical data) are uploaded to the `landing/` prefix in **Amazon S3**.
-2.  **State Machine Orchestration:** **AWS Step Functions** manages the end-to-end workflow, verifying the **RDS** instance availability and initiating the **AWS Glue** Spark environment.
-3.  **Distributed Processing:** **AWS Glue** runs a PySpark job that:
-      * **Data Cleaning:** Handles null values and performs schema enforcement (type mapping) for all regions and ZIP codes.
-      * **Data Cleaning:** Handles null values and performs schema enforcement (type mapping) for all regions and ZIP codes.
-      * **Relational Transformation:** "Unpivots" the time-series date columns into a standardized "long" format (Row-per-Month), making the multi-gigabyte dataset ready for relational queries.
-4.  **Secure Loading:** The entire cleaned and transformed dataset is loaded into an **Amazon RDS (PostgreSQL)** instance via a JDBC connection within a private VPC, ensuring data security and high-performance indexing.
-5.  **Targeted Analytics:** **AWS QuickSight** connects to the warehouse to perform deep-dive analysis specifically on **Washington State**, calculating ROI metrics and identifying 2026 investment "hotspots" within the broader national context.
+1. **Data Ingestion:** Raw Zillow Research CSVs (containing national historical data) are uploaded to the `landing/` prefix in **Amazon S3**.
+2. **State Machine Orchestration:** **AWS Step Functions** manages the end-to-end workflow, verifying the **RDS** instance availability and initiating the **AWS Glue** Spark environment.
+3. **Distributed Processing:** **AWS Glue** runs a PySpark job that:
+    * **Data Cleaning:** Handles null values and performs schema enforcement (type mapping) for all regions and ZIP codes nationally.
+    * **Relational Transformation:** "Unpivots" the time-series date columns into a standardized "long" format (Row-per-Month), making the multi-gigabyte dataset ready for relational queries.
+4. **Secure Loading:** The entire cleaned and transformed dataset is loaded into an **Amazon RDS (PostgreSQL)** instance via a JDBC connection within a private VPC, ensuring data security and high-performance indexing.
+5. **Targeted Analytics:** **AWS QuickSight** connects to the warehouse to perform deep-dive analysis specifically on **Washington State**, calculating ROI metrics and identifying investment "hotspots" within the broader national context.
 
 ---
 
@@ -55,7 +52,7 @@ This project utilizes **Infrastructure as Code (IaC)** to ensure the entire pipe
 │   ├── networking.tf         # VPC, Subnets, and Glue Connections
 │   ├── variables.tf          # Configurable AWS regions & DB creds
 ├── src/
-│   └── glue_clean_wa.py      # PySpark transformation script
+│   └── glue_etl_script.py    # PySpark transformation script (National)
 ├── scripts/
 │   └── setup_db.sql          # RDS Schema and Indexing definitions
 └── README.md
