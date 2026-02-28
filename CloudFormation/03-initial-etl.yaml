@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Layer 3: Initial data load in Parallel Glue ETL Orchestration for DAMG7370'
+
+Parameters:
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: 'Database password for the ETL jobs'
+
+Resources:
+  # --- NEW: DATA CLEANING JOB (Python Shell) ---
+  DataCleaningJob:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Name: 'damg7370-clean-and-interpolate'
+      Role: !ImportValue DAMG7370-GlueRoleArn
+      Command:
+        Name: pythonshell
+        PythonVersion: '3.9'
+        ScriptLocation: 's3://damg7370-house-investment-data-lake/scripts/data_clean.py'
+      MaxCapacity: 0.0625  # Cost-optimized for Pandas scripts
+      GlueVersion: '3.0'
+      
+  # Glue Job 1: House Value
+  HouseValueJob:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Name: 'damg7370-etl-house-value'
+      Role: !ImportValue DAMG7370-GlueRoleArn
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub 's3://damg7370-house-investment-data-lake/scripts/etl_house_value.py'
+      DefaultArguments:
+        '--DB_ENDPOINT': !ImportValue DAMG7370-DatabaseEndpoint
+        '--DB_PASSWORD': !Ref DBPassword
+      GlueVersion: '4.0'
+      WorkerType: 'G.1X'
+      NumberOfWorkers: 3
+
+  # Glue Job 2: Monthly Payment
+  MonthlyPaymentJob:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Name: 'damg7370-etl-monthly-payment'
+      Role: !ImportValue DAMG7370-GlueRoleArn
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub 's3://damg7370-house-investment-data-lake/scripts/etl_monthly_payment.py'
+      DefaultArguments:
+        '--DB_ENDPOINT': !ImportValue DAMG7370-DatabaseEndpoint
+        '--DB_PASSWORD': !Ref DBPassword
+      GlueVersion: '4.0'
+      WorkerType: 'G.1X'
+      NumberOfWorkers: 3
+
+  # Glue Job 3: Rental Income
+  RentalIncomeJob:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Name: 'damg7370-etl-rental-income'
+      Role: !ImportValue DAMG7370-GlueRoleArn
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub 's3://damg7370-house-investment-data-lake/scripts/etl_rental_income.py'
+      DefaultArguments:
+        '--DB_ENDPOINT': !ImportValue DAMG7370-DatabaseEndpoint
+        '--DB_PASSWORD': !Ref DBPassword
+      GlueVersion: '4.0'
+      WorkerType: 'G.1X'
+      NumberOfWorkers: 3
+
+  # Orchestrator: Step Functions
+  ParallelStateMachine:
+    Type: 'AWS::StepFunctions::StateMachine'
+    Properties:
+      StateMachineName: 'damg7370-full-pipeline-orchestrator'
+      RoleArn: !ImportValue DAMG7370-StepFunctionsRoleArn
+      DefinitionString: !Sub |
+        {
+          "StartAt": "CleanAndInterpolate",
+          "States": {
+            "CleanAndInterpolate": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "${DataCleaningJob}"
+              },
+              "Next": "ParallelDataLoad"
+            },
+            "ParallelDataLoad": {
+              "Type": "Parallel",
+              "End": true,
+              "Branches": [
+                { "StartAt": "HV", "States": { "HV": { "Type": "Task", "Resource": "arn:aws:states:::glue:startJobRun.sync", "Parameters": { "JobName": "${HouseValueJob}" }, "End": true } } },
+                { "StartAt": "MP", "States": { "MP": { "Type": "Task", "Resource": "arn:aws:states:::glue:startJobRun.sync", "Parameters": { "JobName": "${MonthlyPaymentJob}" }, "End": true } } },
+                { "StartAt": "RI", "States": { "RI": { "Type": "Task", "Resource": "arn:aws:states:::glue:startJobRun.sync", "Parameters": { "JobName": "${RentalIncomeJob}" }, "End": true } } }
+              ]
+            }
+          }
+        }
