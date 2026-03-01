@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'End-to-End ETL orchestration: Data Cleaning, Parallel Landing Load, and Final Data Load'
+
+Parameters:
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: 'Database password for the ETL jobs'
+
+Resources:
+  # --- STEP 1: DATA CLEANING JOB ---
+  DataCleaningJob:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Name: 'damg7370-clean-and-interpolate'
+      Role: !ImportValue DAMG7370-GlueRoleArn
+      Command:
+        Name: pythonshell
+        PythonVersion: '3.9'
+        ScriptLocation: 's3://damg7370-house-investment-data-lake/scripts/data_clean.py'
+      MaxCapacity: 0.0625  # Cost-optimized for Pandas scripts
+      GlueVersion: '3.0'
+      
+  # --- STEP 2: PARALLEL GLUE JOBS (RAW TO LANDING) ---
+  HouseValueJob:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Name: 'damg7370-etl-house-value'
+      Role: !ImportValue DAMG7370-GlueRoleArn
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub 's3://damg7370-house-investment-data-lake/scripts/etl_house_value.py'
+      DefaultArguments:
+        '--DB_ENDPOINT': !ImportValue DAMG7370-DatabaseEndpoint
+        '--DB_PASSWORD': !Ref DBPassword
+      GlueVersion: '4.0'
+      WorkerType: 'G.1X'
+      NumberOfWorkers: 3
+
+  MonthlyPaymentJob:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Name: 'damg7370-etl-monthly-payment'
+      Role: !ImportValue DAMG7370-GlueRoleArn
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub 's3://damg7370-house-investment-data-lake/scripts/etl_monthly_payment.py'
+      DefaultArguments:
+        '--DB_ENDPOINT': !ImportValue DAMG7370-DatabaseEndpoint
+        '--DB_PASSWORD': !Ref DBPassword
+      GlueVersion: '4.0'
+      WorkerType: 'G.1X'
+      NumberOfWorkers: 3
+
+  RentalIncomeJob:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Name: 'damg7370-etl-rental-income'
+      Role: !ImportValue DAMG7370-GlueRoleArn
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub 's3://damg7370-house-investment-data-lake/scripts/etl_rental_income.py'
+      DefaultArguments:
+        '--DB_ENDPOINT': !ImportValue DAMG7370-DatabaseEndpoint
+        '--DB_PASSWORD': !Ref DBPassword
+      GlueVersion: '4.0'
+      WorkerType: 'G.1X'
+      NumberOfWorkers: 3
+
+  # --- STEP 3: LANDING TO FINAL DATA LOAD JOB ---
+  LndToFinalDataLoadJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: 'damg7370-lnd-to-final-data-load'
+      Role: !ImportValue DAMG7370-GlueRoleArn
+      Command:
+        Name: pythonshell
+        ScriptLocation: 's3://damg7370-house-investment-data-lake/scripts/lnd_to_final_data_load.py'
+        PythonVersion: '3.9'
+      MaxCapacity: 0.0625
+      Timeout: 15
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      DefaultArguments:
+        '--DB_HOST': !ImportValue DAMG7370-DatabaseEndpoint
+        '--DB_NAME': 'postgres'
+        '--DB_USER': 'dbadmin'
+        '--DB_PWD': !Ref DBPassword
+        '--additional-python-modules': 'psycopg2-binary'
+
+  # --- ORCHESTRATOR: UNIFIED STEP FUNCTION ---
+  EndToEndPipelineStateMachine:
+    Type: 'AWS::StepFunctions::StateMachine'
+    Properties:
+      StateMachineName: 'damg7370-end-to-end-pipeline'
+      RoleArn: !ImportValue DAMG7370-StepFunctionsRoleArn
+      DefinitionString: !Sub |
+        {
+          "StartAt": "CleanAndInterpolate",
+          "States": {
+            "CleanAndInterpolate": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "${DataCleaningJob}"
+              },
+              "Next": "ParallelRawDataLoad"
+            },
+            "ParallelRawDataLoad": {
+              "Type": "Parallel",
+              "Next": "landing-to-final",
+              "Branches": [
+                { "StartAt": "HV", "States": { "HV": { "Type": "Task", "Resource": "arn:aws:states:::glue:startJobRun.sync", "Parameters": { "JobName": "${HouseValueJob}" }, "End": true } } },
+                { "StartAt": "MP", "States": { "MP": { "Type": "Task", "Resource": "arn:aws:states:::glue:startJobRun.sync", "Parameters": { "JobName": "${MonthlyPaymentJob}" }, "End": true } } },
+                { "StartAt": "RI", "States": { "RI": { "Type": "Task", "Resource": "arn:aws:states:::glue:startJobRun.sync", "Parameters": { "JobName": "${RentalIncomeJob}" }, "End": true } } }
+              ]
+            },
+            "landing-to-final": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "${LndToFinalDataLoadJob}"
+              },
+              "End": true
+            }
+          }
+        }

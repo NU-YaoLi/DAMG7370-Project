@@ -58,7 +58,7 @@ for c in df_transformed.columns:
 # Load to RDS Staging Table
 (df_transformed.write.format("jdbc")
  .option("url", f"jdbc:postgresql://{DB_ENDPOINT}:5432/postgres")
- .option("dbtable", "stg_house_value")
+ .option("dbtable", "lnd_house_value")
  .option("user", "dbadmin").option("password", DB_PASSWORD)
  .option("driver", "org.postgresql.Driver").mode("overwrite").save())
 

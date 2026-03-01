@@ -73,7 +73,7 @@ Resources:
   ParallelStateMachine:
     Type: 'AWS::StepFunctions::StateMachine'
     Properties:
-      StateMachineName: 'damg7370-full-pipeline-orchestrator'
+      StateMachineName: 'damg7370-raw-to-landing-pipeline'
       RoleArn: !ImportValue DAMG7370-StepFunctionsRoleArn
       DefinitionString: !Sub |
         {

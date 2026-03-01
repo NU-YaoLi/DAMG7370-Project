@@ -48,7 +48,7 @@ for c in df_transformed.columns:
 
 (df_transformed.write.format("jdbc")
  .option("url", f"jdbc:postgresql://{DB_ENDPOINT}:5432/postgres")
- .option("dbtable", "stg_rental_income") # UPDATED to staging prefix
+ .option("dbtable", "lnd_rental_income") # UPDATED to staging prefix
  .option("user", "dbadmin").option("password", DB_PASSWORD)
  .option("driver", "org.postgresql.Driver").mode("overwrite").save())
 
