@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Layer 1: Storage and IAM for DAMG7370 House Investment Pipeline'
+
+Resources:
+  # 1. Amazon S3 Data Lake
+  DataLakeBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: 'damg7370-house-investment-data-lake'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # 2. IAM Role for AWS Glue (Compute/ETL)
+  GlueServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: 'damg7370-house-investment-glue-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+      Policies:
+        - PolicyName: S3DataLakeAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                  - 's3:DeleteObject'
+                  - 's3:ListBucket'
+                Resource: 
+                  - !GetAtt DataLakeBucket.Arn
+                  - !Sub '${DataLakeBucket.Arn}/*'
+
+  # 3. IAM Role for AWS Step Functions (Orchestration)
+  StepFunctionsRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: 'damg7370-house-investment-sfn-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StepFunctionsGlueAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'glue:StartJobRun'
+                  - 'glue:GetJobRun'
+                  - 'glue:GetJobRuns'
+                  - 'glue:BatchStopJobRun'
+                Resource: '*'
+
+# Exporting values so Layers 2 and 3 can use them
+Outputs:
+  DataLakeBucketName:
+    Value: !Ref DataLakeBucket
+    Export:
+      Name: DAMG7370-DataLakeBucket
+  GlueRoleArn:
+    Value: !GetAtt GlueServiceRole.Arn
+    Export:
+      Name: DAMG7370-GlueRoleArn
+  StepFunctionsRoleArn:
+    Value: !GetAtt StepFunctionsRole.Arn
+    Export:
+      Name: DAMG7370-StepFunctionsRoleArn

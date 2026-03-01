@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Glue Python Shell Job deployment for landing to final table data load'
+
+Parameters:
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: 'Database password for the ETL jobs'
+
+Resources:
+  LndToFinalDataLoadJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: 'damg7370-lnd-to-final-data-load'
+      Role: !ImportValue DAMG7370-GlueRoleArn
+      Command:
+        Name: pythonshell
+        ScriptLocation: 's3://damg7370-house-investment-data-lake/scripts/lnd_to_final_data_load.py'
+        PythonVersion: '3.9'
+      MaxCapacity: 0.0625
+      Timeout: 15
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      DefaultArguments:
+        '--DB_HOST': !ImportValue DAMG7370-DatabaseEndpoint
+        '--DB_NAME': 'postgres'
+        '--DB_USER': 'dbadmin'
+        '--DB_PWD': !Ref DBPassword
+        '--additional-python-modules': 'psycopg2-binary'
+
+  ParallelStateMachine:
+    Type: 'AWS::StepFunctions::StateMachine'
+    Properties:
+      StateMachineName: 'damg7370-landing-to-final-pipeline'
+      RoleArn: !ImportValue DAMG7370-StepFunctionsRoleArn
+      DefinitionString: !Sub |
+        {
+          "StartAt": "landing-to-final",
+          "States": {
+            "landing-to-final": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "${LndToFinalDataLoadJob}"
+              },
+              "End": true
+            }
+          }
+        }

@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Layer 2: RDS Postgres for DAMG7370 House Investment Pipeline'
+
+Parameters:
+  DBUsername:
+    Type: String
+    Default: 'dbadmin'
+    Description: 'Master username for the PostgreSQL database'
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: 'Master password for the PostgreSQL database (min 8 chars)'
+
+Resources:
+  # 1. Security Group to allow internal database access
+  RDSSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Allow Postgres traffic for DAMG7370 pipeline'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 0.0.0.0/0 
+
+  # 2. Amazon RDS PostgreSQL Instance
+  PostgresDBInstance:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBInstanceIdentifier: 'damg7370-house-investment-db'
+      Engine: postgres
+      EngineVersion: '16'
+      DBInstanceClass: db.t4g.micro 
+      AllocatedStorage: 200
+      StorageType: gp3
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      VPCSecurityGroups:
+        - !GetAtt RDSSecurityGroup.GroupId
+      PubliclyAccessible: true
+      BackupRetentionPeriod: 1 
+
+Outputs:
+  DatabaseEndpoint:
+    Value: !GetAtt PostgresDBInstance.Endpoint.Address
+    Export:
+      Name: DAMG7370-DatabaseEndpoint
