@@ -1,8 +1,42 @@
 import pandas as pd
 import numpy as np
 import sys
+import psycopg2
+from awsglue.utils import getResolvedOptions
 
-# AWS Glue provides 'boto3' and 'pandas' by default in Python Shell
+# --- DATABASE SETUP ---
+# Fetch DB credentials from Glue Job parameters
+args = getResolvedOptions(sys.argv, ['DB_ENDPOINT', 'DB_PASSWORD'])
+DB_ENDPOINT = args['DB_ENDPOINT']
+DB_PASSWORD = args['DB_PASSWORD']
+DB_USER = "dbadmin"
+DB_NAME = "postgres"
+
+def create_landing_schema():
+    print("Connecting to database to ensure 'landing' schema exists...")
+    try:
+        # Establish connection to RDS
+        conn = psycopg2.connect(
+            host=DB_ENDPOINT,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD
+        )
+        # DDL commands like CREATE SCHEMA need autocommit enabled
+        conn.autocommit = True 
+        cursor = conn.cursor()
+        
+        # Execute the SQL command
+        cursor.execute("CREATE SCHEMA IF NOT EXISTS landing;")
+        print("Schema 'landing' verified/created successfully.")
+        
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"Failed to create schema: {e}")
+        raise e # Fail the job if it can't reach the database
+
+# --- S3 DATA PROCESSING ---
 def clean_and_fill_s3(fill_ln_num, input_path, output_path):
     print(f"Reading from: {input_path}")
     
@@ -39,5 +73,9 @@ files_to_process = [
     (9, "raw_Zip_zori_uc_sfrcondomfr_sm_sa_month.csv", "cleaned_Zip_zori.csv")
 ]
 
+# 1. First, ensure the schema exists in the database
+create_landing_schema()
+
+# 2. Then, process the S3 files
 for fill_num, in_file, out_file in files_to_process:
     clean_and_fill_s3(fill_num, S3_RAW + in_file, S3_CLEANED + out_file)

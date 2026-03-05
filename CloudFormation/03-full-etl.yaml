@@ -20,6 +20,10 @@ Resources:
         ScriptLocation: 's3://damg7370-house-investment-data-lake/scripts/data_clean.py'
       MaxCapacity: 0.0625  # Cost-optimized for Pandas scripts
       GlueVersion: '3.0'
+      DefaultArguments:
+        '--DB_ENDPOINT': !ImportValue DAMG7370-DatabaseEndpoint
+        '--DB_PASSWORD': !Ref DBPassword
+        '--additional-python-modules': 'psycopg2-binary'
       
   # --- STEP 2: PARALLEL GLUE JOBS (RAW TO LANDING) ---
   HouseValueJob:
