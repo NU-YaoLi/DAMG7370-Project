@@ -24,7 +24,7 @@ This project utilizes **Infrastructure as Code (IaC)** to ensure the entire pipe
 
 | Component | Tool | Purpose |
 | :--- | :--- | :--- |
-| **Infrastructure** | **Terraform** | Automates the deployment of the S3-Glue-RDS ecosystem. |
+| **Infrastructure** | **AWS CloudFormation** | Automates the deployment of the S3-Glue-RDS ecosystem using native AWS templates. |
 | **Storage** | **Amazon S3** | Data Lake storage with **Partitioning** (by State/Year) for query optimization. |
 | **Orchestration** | **AWS Step Functions** | State machine logic to manage job dependencies and error retries. |
 | **Compute / ETL** | **AWS Glue (PySpark)** | Distributed processing engine for large-scale data transformation. |
@@ -35,6 +35,8 @@ This project utilizes **Infrastructure as Code (IaC)** to ensure the entire pipe
 ---
 
 ## 🚀 Pipeline Architecture
+
+![Pipeline Architecture](docs/architecture-diagram.png)
 
 1. **Data Ingestion:** Raw Zillow Research CSVs (containing national historical data) are uploaded to the `landing/` prefix in **Amazon S3**.
 2. **State Machine Orchestration:** **AWS Step Functions** manages the end-to-end workflow, verifying the **RDS** instance availability and initiating the **AWS Glue** Spark environment.
@@ -48,10 +50,10 @@ This project utilizes **Infrastructure as Code (IaC)** to ensure the entire pipe
 
 ## 📂 Project Structure
 ```text
-├── terraform/                # Infrastructure as Code
-│   ├── main.tf               # S3, RDS, and Step Function logic
-│   ├── networking.tf         # VPC, Subnets, and Glue Connections
-│   ├── variables.tf          # Configurable AWS regions & DB creds
+├── cloudformation/           # Native AWS Infrastructure as Code
+│   ├── main-stack.yaml       # S3, RDS, Glue, and Step Function resource definitions
+│   ├── networking-stack.yaml # VPC, Subnets, Security Groups, and Glue Connections
+│   ├── parameters.json       # Configurable AWS environments & DB credentials
 ├── src/
 │   └── glue_etl_script.py    # PySpark transformation script (National)
 ├── scripts/
@@ -62,4 +64,5 @@ This project utilizes **Infrastructure as Code (IaC)** to ensure the entire pipe
 ---
 
 ## 📂 visual representation
-<img width="1600" height="914" alt="Code_Generated_Image" src="https://github.com/user-attachments/assets/ea544112-f19d-4c03-9008-e8bad9ed149e" />
+![unnamed](https://github.com/user-attachments/assets/9bdc4fd5-01b0-4320-a2fe-c3ce09cb0dc9)
+
