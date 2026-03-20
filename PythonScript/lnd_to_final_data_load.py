@@ -88,7 +88,10 @@ def run_etl():
             
             union
             
-            select metro, state_name as state, county_name 
+            select 
+                case when metro = 'Seattle,WA' then 'Seattle-Tacoma-Bellevue, WA' else metro end as metro, 
+                state_name as state, 
+                county_name 
             from landing.lnd_rental_income 
             where metro is not null
         ) as combined_geos
@@ -144,14 +147,22 @@ def run_etl():
         insert into fact_rental_income (
             geo_key, rental_income, metric_date, year
         )
+        with clean_lnd_rental as (
+            select 
+                case when metro = 'Seattle, WA' then 'Seattle-Tacoma-Bellevue, WA' else metro end as metro,
+                rental_income,
+                metric_date,
+                year
+            from landing.lnd_rental_income
+            where metro is not null
+        )
         select 
             g.geo_key,
             avg(l.rental_income) as rental_income,
             l.metric_date, 
             l.year
-        from landing.lnd_rental_income l
+        from clean_lnd_rental l
         join dim_geography g on l.metro = g.metro
-        where l.metro is not null
         group by g.geo_key, l.metric_date, l.year
         on conflict (geo_key, metric_date) 
         do update set 
