@@ -76,20 +76,35 @@ def run_etl():
         insert into dim_geography (metro, state, county_name)
         select distinct on (metro) metro, state, county_name
         from (
-            select metro, state, county_name 
+            select 
+                case 
+                    when metro = 'Seattle, WA' then 'Seattle-Tacoma-Bellevue, WA' 
+                    else metro 
+                end as metro, 
+                state, 
+                county_name 
             from landing.lnd_house_value 
             where metro is not null
             
             union
             
-            select region_name as metro, state_name as state, null as county_name 
+            select 
+                case 
+                    when region_name = 'Seattle, WA' then 'Seattle-Tacoma-Bellevue, WA' 
+                    else region_name 
+                end as metro, 
+                state_name as state, 
+                null as county_name 
             from landing.lnd_monthly_payment 
             where region_name is not null
             
             union
             
             select 
-                case when metro = 'Seattle,WA' then 'Seattle-Tacoma-Bellevue, WA' else metro end as metro, 
+                case 
+                    when metro = 'Seattle, WA' then 'Seattle-Tacoma-Bellevue, WA' 
+                    else metro 
+                end as metro, 
                 state_name as state, 
                 county_name 
             from landing.lnd_rental_income 
@@ -125,6 +140,18 @@ def run_etl():
         """
 
         upsert_monthly = """
+        with clean_lnd_monthly as (
+            select 
+                case 
+                    when region_name = 'Seattle, WA' then 'Seattle-Tacoma-Bellevue, WA' 
+                    else region_name 
+                end as region_name,
+                monthly_payment,
+                metric_date,
+                year
+            from landing.lnd_monthly_payment
+            where region_name is not null
+        )
         insert into fact_monthly_payment (
             geo_key, monthly_payment, metric_date, year
         )
@@ -133,9 +160,8 @@ def run_etl():
             avg(l.monthly_payment) as monthly_payment,
             l.metric_date, 
             l.year
-        from landing.lnd_monthly_payment l
+        from clean_lnd_monthly l
         join dim_geography g on l.region_name = g.metro
-        where l.region_name is not null
         group by g.geo_key, l.metric_date, l.year
         on conflict (geo_key, metric_date) 
         do update set 
