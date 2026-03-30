@@ -56,15 +56,23 @@ Price-to-Rent Ratio: Standardized affordability metric for WA metros.
 
 ## 📂 Project Structure
 ```text
-├── cloudformation/           # Native AWS Infrastructure as Code
-│   ├── main-stack.yaml       # S3, RDS, Glue, and Step Function resource definitions
-│   ├── networking-stack.yaml # VPC, Subnets, Security Groups, and Glue Connections
-│   ├── parameters.json       # Configurable AWS environments & DB credentials
-├── src/
-│   └── glue_etl_script.py    # PySpark transformation script (National)
-├── scripts/
-│   └── setup_db.sql          # RDS Schema and Indexing definitions
-└── README.md
+├── CloudFormation/                 # Native AWS Infrastructure as Code
+│   ├── 01-storage-iam.yaml         # S3 buckets and IAM roles setup
+│   ├── 02-database.yaml            # RDS PostgreSQL instance setup
+│   ├── 03-full-etl.yaml            # Glue jobs and Step Functions orchestration
+│   ├── bkup-initial-etl.yaml       # Backup of earlier ETL configuration
+│   └── bkup-second-etl.yaml        # Backup of intermediate ETL configuration
+├── PythonScript/                   # PySpark & Python transformation scripts
+│   ├── bkup_lnd_to_final_data_load.py # Backup of main load script
+│   ├── data_clean.py               # Script for cleaning and standardizing raw data
+│   ├── etl_house_value.py          # ETL job specific to ZHVI (Home Value)
+│   ├── etl_monthly_payment.py      # ETL job specific to mortgage payments
+│   ├── etl_rental_income.py        # ETL job specific to ZORI (Rental Income)
+│   └── lnd_to_final_data_load.py   # Main script moving data from landing S3 to final RDS
+├── Visualization/                  # Streamlit web application
+│   └── dashboard.py                # Interactive real estate analytics dashboard
+├── .gitignore                      # Git ignore file
+└── README.md                       # Project documentation
 ```
 
 ---
