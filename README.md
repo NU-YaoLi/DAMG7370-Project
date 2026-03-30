@@ -15,7 +15,7 @@ The objective is to build and deploy a fully automated, state-wide data platform
 * **Automated Extraction:** Ingest national ZHVI (Home Value) and ZORI (Rent Index) datasets from Zillow Research.
 * **Distributed ETL:** Use PySpark to handle the high-volume task of cleaning and "unpivoting" time-series data for the entire US.
 * **Relational Storage:** Load the complete processed dataset into an RDS instance for high-performance SQL analysis.
-* **Interactive BI:** Deploy a QuickSight dashboard to visualize 5-year ROI and yield correlations specifically for **Washington State**.
+* **Interactive BI:** Deploy a Streamlit dashboard to visualize 5-year ROI, gross yields, and net cash flow correlations specifically for **Washington State**.
 
 ---
 
@@ -29,7 +29,7 @@ This project utilizes **Infrastructure as Code (IaC)** to ensure the entire pipe
 | **Orchestration** | **AWS Step Functions** | State machine logic to manage job dependencies and error retries. |
 | **Compute / ETL** | **AWS Glue (PySpark)** | Distributed processing engine for large-scale data transformation. |
 | **Database** | **Amazon RDS (Postgres)** | High-availability relational storage for the final analytics layer. |
-| **Visualization** | **AWS QuickSight** | BI tool for mapping regional investment "hotspots" in WA. |
+| **Visualization** | **Streamlit** | Python-based interactive dashboard for real-time investment metrics. |
 | **Identity Management** | **AWS IAM** | Centralized workforce authentication and Single Sign-On (SSO) for secure account access. |
 
 ---
@@ -44,7 +44,13 @@ This project utilizes **Infrastructure as Code (IaC)** to ensure the entire pipe
     * **Data Cleaning:** Handles null values and performs schema enforcement (type mapping) for all regions and ZIP codes nationally.
     * **Relational Transformation:** "Unpivots" the time-series date columns into a standardized "long" format (Row-per-Month), making the multi-gigabyte dataset ready for relational queries.
 4. **Secure Loading:** The entire cleaned and transformed dataset is loaded into an **Amazon RDS (PostgreSQL)** instance via a JDBC connection within a private VPC, ensuring data security and high-performance indexing.
-5. **Targeted Analytics:** **AWS QuickSight** connects to the warehouse to perform deep-dive analysis specifically on **Washington State**, calculating ROI metrics and identifying investment "hotspots" within the broader national context.
+5. **Targeted Analytics:** A **Streamlit application** connects to the Amazon RDS warehouse via SQLAlchemy. It performs on-the-fly feature engineering to calculate:
+
+Gross Rental Yield: Monthly rent annualized against total property value.
+
+Net Cash Flow: Difference between rental income and estimated mortgage payments.
+
+Price-to-Rent Ratio: Standardized affordability metric for WA metros.
 
 ---
 
@@ -62,6 +68,16 @@ This project utilizes **Infrastructure as Code (IaC)** to ensure the entire pipe
 ```
 
 ---
+## 📂 Run Dashboard locally
+- Install packages: pip install streamlit pandas sqlalchemy psycopg2-binary plotly
+- Add credentials in FOLDER/secrets.toml:
+[postgres]
+host = "your-rds-endpoint.aws.com"
+port = 5432
+database = "your_db"
+username = "your_user"
+password = "your_password"
+- Execute dashboard: streamlit run dashboard.py
 
 ## 📂 visual representation
 ![unnamed](https://github.com/user-attachments/assets/9bdc4fd5-01b0-4320-a2fe-c3ce09cb0dc9)
