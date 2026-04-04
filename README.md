@@ -29,8 +29,8 @@ This project utilizes **Infrastructure as Code (IaC)** to ensure the entire pipe
 | **Orchestration** | **AWS Step Functions** | State machine logic to manage job dependencies and error retries. |
 | **Compute / ETL** | **AWS Glue (PySpark)** | Distributed processing engine for large-scale data transformation. |
 | **Database** | **Amazon RDS (Postgres)** | High-availability relational storage for the final analytics layer. |
-| **Visualization** | **Streamlit** | Python-based interactive dashboard for real-time investment metrics. |
 | **Identity Management** | **AWS IAM** | Centralized workforce authentication and Single Sign-On (SSO) for secure account access. |
+| **Visualization** | **Streamlit** | Python-based interactive dashboard for real-time investment metrics. |
 
 ---
 
